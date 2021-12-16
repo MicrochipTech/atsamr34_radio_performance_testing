@@ -1,0 +1,154 @@
+; File	: NA_Receiver_NarrowBand.ttl
+; Author: m16946
+
+
+; --- Default radio parameters ---
+modulation = "lora"				; modulation
+power = "20"					; Power index
+pa = "on"						; Power Amp (on/off)
+bandwidth = "125"				; Bandwidth kHz
+afcbw = "41.7"					; Automatic Freq Correction Bandwidth
+receive_bandwidth = "25"		; Signal bandwidth kHz
+
+eu_freq_low = "863000000"		; Low Frequency
+eu_freq_mid = "865000000"		; Mid Frequency
+eu_freq_high = "867000000"		; High Frequency
+
+na_freq_low = "902300000"		; Low Frequency
+na_freq_mid = "914900000"		; Mid Frequency
+na_freq_high = "927500000"		; High Frequency
+
+freq = na_freq_low				; Frequency Hz
+fdev = "25000"					; Frequency Deviation Hz
+bitrate = "500000"				; Bitrate bit/sec
+prlen = "8"						; Preamble Length
+crc = "on"						; CRC header
+cr = "4/5"						; Coding Rate
+bt = "0.5"						; Gaussian Baseband data shaping
+iqi = "off"						; Invert IQI
+spreading_factor = "sf7"		; Spreading Factor
+wdt = "0"						; Watchdog Timer
+predefined_packet = "0102030405060708090a0b0c0d0e0f"
+lbt_scanperiod = "10"			; LBT scanperiod ms
+lbt_threshold = "-70"			; LBT threshold
+lbt_samples = "5"				; LBT samples
+lbt_on_off = "0"				; Enable LBT (1=On, 0=Off)
+command_delay = 500
+
+clearscreen 0
+
+sendln "sys reset"
+pause 1
+
+; --- Set/input radio parameters ---
+inputbox "Power: " "Set radio parameter" power
+sprintf2 command_str "radio set pwr %s" inputstr
+sendln command_str
+mpause command_delay
+
+inputbox "Frequency in Hz: " "Set radio parameter" freq
+sprintf2 command_str "radio set freq %s" inputstr
+sendln command_str
+mpause command_delay
+
+inputbox "PA: " "Set radio parameter" pa
+sprintf2 command_str "radio set pa %s" inputstr
+sendln command_str
+mpause command_delay
+
+str_count = "10"
+inputBox "Number of expected packets to receive: " "Input" str_count
+str2int expected_packets inputstr
+
+; --- Execute test ---
+sprintf2 command_str "radio rx 0"
+sendln command_str
+mpause command_delay
+
+count = 0
+expected_packet_count = 0
+tested_packet_count = 0
+corrupt_packet_count = 0
+per = 0
+
+tolower packet predefined_packet
+sprintf2 expected_str "radio_rx %s" packet
+
+dispstr "Receive mode ON"#13#10
+
+sprintf2 str "[Expecting to receive %d packet(s) - %s]" expected_packets predefined_packet
+dispstr str #13#10
+
+while count<expected_packets
+
+  dispstr '...' #13#10
+  
+  ; Wait until receiving a line which contain 'radio_rx '
+  waitln 'radio_rx '
+
+  ; Extract and format the received packet
+  tolower packet inputstr
+  strsplit packet ' ' 2
+  rx_packet = groupmatchstr2 
+  sprintf2 str "[Received packet: %s]" rx_packet
+  dispstr str #13#10
+  ; print rssi from the received packet
+  sprintf2 command_str "radio get pktrssi"
+  sendln command_str
+  mpause 50
+  recvln
+
+  ; Verify the received packet with the predefined packet
+  strcompare predefined_packet rx_packet
+  if result != 0 then
+    corrupt_packet_count = corrupt_packet_count + 1
+	;dispstr '[Received corrupted packet]'#13#10
+  else
+	expected_packet_count = expected_packet_count + 1
+	;dispstr '[Received expected packet]'#13#10	
+  endif
+
+  ; + 1 new packet received 
+  count = count + 1
+
+  ; Update the status box
+  call update_status
+
+endwhile
+
+; Print the test result
+dispstr '--- Test Result ---'#13#10
+sprintf2 str "[Packets received: %d]" count
+dispstr str #13#10
+sprintf2 str "[Packets expected: %d]" expected_packet_count
+dispstr str #13#10
+sprintf2 str "[Packets corrupted: %d]" corrupt_packet_count
+dispstr str #13#10
+;sprintf2 str "corrupt_packet_count = %d" corrupt_packet_count
+;dispstr str #13#10
+;sprintf2 str "expected_packets = %d" expected_packets
+;dispstr str #13#10
+;sprintf2 str "count = %d" count
+;dispstr str #13#10
+
+; PER calculation
+delta = (corrupt_packet_count + (expected_packets - count))*100
+per = delta / expected_packets
+sprintf2 str "[PER: %d%]" per
+dispstr str #13#10
+dispstr '-------------------'#13#10
+
+mpause command_delay
+sprintf2 command_str "radio rxstop"
+sendln command_str
+mpause command_delay
+
+; --- Stop test ---
+dispstr 'End of RX test'
+messagebox "Click OK to close the test" " Execution paused"
+end
+
+:update_status
+sprintf2 str "Received: %d/%d - Expected: %d - Corrupted: %d" count expected_packets expected_packet_count corrupt_packet_count
+statusbox str 'PER Result'
+return

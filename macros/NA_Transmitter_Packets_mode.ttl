@@ -1,0 +1,116 @@
+; File	: NA_Transmitter_Packets_mode.ttl
+; Author: m16946
+
+; --- Default radio parameters ---
+modulation = "lora"				; modulation
+power = "20"					; Power index
+pa = "on"						; Power Amp (on/off)
+bandwidth = "125"				; Bandwidth kHz
+afcbw = "41.7"					; Automatic Freq Correction Bandwidth
+receive_bandwidth = "25"		; Signal bandwidth kHz
+
+eu_freq_low = "863000000"		; Low Frequency
+eu_freq_mid = "865000000"		; Mid Frequency
+eu_freq_high = "867000000"		; High Frequency
+
+na_freq_low = "902300000"		; Low Frequency
+na_freq_mid = "914900000"		; Mid Frequency
+na_freq_high = "927500000"		; High Frequency
+
+freq = na_freq_low				; Frequency Hz
+fdev = "25000"					; Frequency Deviation Hz
+bitrate = "500000"				; Bitrate bit/sec
+prlen = "8"						; Preamble Length
+crc = "on"						; CRC header
+cr = "4/5"						; Coding Rate
+bt = "0.5"						; Gaussian Baseband data shaping
+iqi = "off"						; Invert IQI
+spreading_factor = "sf7"		; Spreading Factor
+wdt = "0"						; Watchdog Timer
+predefined_packet = "0102030405060708090a0b0c0d0e0f"
+lbt_scanperiod = "10"			; LBT scanperiod ms
+lbt_threshold = "-70"			; LBT threshold
+lbt_samples = "5"				; LBT samples
+lbt_on_off = "0"				; Enable LBT (1=On, 0=Off)
+command_delay = 500
+
+clearscreen 0
+
+sendln "sys reset"
+pause 1
+
+; --- Set/input radio parameters ---
+inputbox "Power: " "Set radio parameter" power
+sprintf2 command_str "radio set pwr %s" inputstr
+sendln command_str
+mpause command_delay
+
+inputbox "Frequency in Hz: " "Set radio parameter" freq
+sprintf2 command_str "radio set freq %s" inputstr
+sendln command_str
+mpause command_delay
+
+inputbox "PA: " "Set radio parameter" pa
+sprintf2 command_str "radio set pa %s" inputstr
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set mod %s" modulation
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set crc %s" crc
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set lbt %s %s %s %s" lbt_scanperiod lbt_threshold lbt_samples lbt_on_off
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set cr %s" cr
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set iqi %s" iqi
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set sf %s" spreading_factor
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set bw %s" bandwidth
+sendln command_str
+mpause command_delay
+
+str_count = "10"
+inputBox "Number of packets to be transmitted: " "Input" str_count
+str2int count inputstr
+
+str_delay = "1000"
+inputBox "Delay between consecutive packets transmission (ex. 200 for 200ms, 1000 for 1sec): " "Input" str_delay
+str2int delay inputstr
+
+; --- Execute test ---
+i = 0
+while i<count
+  i = i+1
+  sprintf2 str "[Sending %d/%d packet]" i count
+  dispstr str #13#10
+
+  sprintf2 command_str "radio tx %s 0" predefined_packet
+  sendln command_str
+  mpause delay
+  
+  ; test to insert unexpected packets
+  ;sprintf2 command_str "radio tx AABB 0"
+  ;sendln command_str
+  ;mpause delay  
+  
+endwhile
+
+; --- Stop test ---
+dispstr 'End of TX test'
+messagebox "Click OK to close the test" " Execution paused"
+end
+

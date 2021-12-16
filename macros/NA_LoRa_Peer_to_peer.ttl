@@ -1,0 +1,153 @@
+; File	: NA_LoRa_Peer_to_peer.ttl
+; Author: m16946
+
+; --- Default radio parameters ---
+modulation = "lora"				; modulation
+power = "20"					; Power index
+pa = "on"						; Power Amp (on/off)
+bandwidth = "125"				; Bandwidth kHz
+afcbw = "41.7"					; Automatic Freq Correction Bandwidth
+receive_bandwidth = "25"		; Signal bandwidth kHz
+
+eu_freq_low = "863000000"		; Low Frequency
+eu_freq_mid = "865000000"		; Mid Frequency
+eu_freq_high = "867000000"		; High Frequency
+
+na_freq_low = "902300000"		; Low Frequency
+na_freq_mid = "914900000"		; Mid Frequency
+na_freq_high = "927500000"		; High Frequency
+
+freq = na_freq_low				; Frequency Hz
+fdev = "25000"					; Frequency Deviation Hz
+bitrate = "5000"				; Bitrate bit/sec
+prlen = "8"						; Preamble Length
+crc = "on"						; CRC header
+cr = "4/5"						; Coding Rate
+bt = "0.5"						; Gaussian Baseband data shaping
+iqi = "off"						; Invert IQI
+spreading_factor = "sf7"		; Spreading Factor
+wdt = "0"						; Watchdog Timer
+predefined_packet = "0102030405060708090a0b0c0d0e0f"
+number_of_packet = "1"          ; Number of packet to transmit
+lbt_scanperiod = "10"			; LBT scanperiod ms
+lbt_threshold = "-70"			; LBT threshold
+lbt_samples = "5"				; LBT samples
+lbt_on_off = "0"				; Enable LBT (1=On, 0=Off)
+command_delay = 500
+
+clearscreen 0
+
+sendln "sys reset"
+pause 1
+
+; --- Set radio parameters ---
+sprintf2 command_str "radio set pwr %s" power
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set freq %s" freq
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set pa %s" pa
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set crc %s" crc
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set lbt %s %s %s %s" lbt_scanperiod lbt_threshold lbt_samples lbt_on_off
+sendln command_str
+mpause command_delay
+
+sprintf2 command_str "radio set mod %s" modulation
+sendln command_str
+mpause command_delay
+
+strcompare modulation 'lora'
+if result = 0 then
+
+  sprintf2 command_str "radio set cr %s" cr
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set iqi %s" iqi
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set sf %s" spreading_factor
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set bw %s" bandwidth
+  sendln command_str
+  mpause command_delay
+
+else
+
+  sprintf2 command_str "radio set afcbw %s" afcbw
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set rxbw %s" receive_bandwidth
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set bitrate %s" bitrate
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set fdev %s" fdev
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set prlen %s" prlen
+  sendln command_str
+  mpause command_delay
+
+  sprintf2 command_str "radio set bt %s" bt
+  sendln command_str
+  mpause command_delay
+
+endif
+
+strdim role 2
+role[0] = 'Transmitter' 
+role[1] = 'Receiver' 
+
+:retry
+
+listbox 'Select the role of your device.' 'P2P communication' role
+if result = -1 then
+  ;cancel
+  goto end
+elseif result = 0 then
+  ;transmitter
+  dispstr 'Role: Transmitter' #13#10
+  sendln "radio rxstop"
+  mpause command_delay
+  
+  messagebox "Click OK to transmit packet" " Execution paused"  
+  
+  sprintf2 command_str "radio tx %s %s" predefined_packet number_of_packet
+  sendln command_str
+  mpause command_delay
+  
+elseif result = 1 then
+  ;receiver
+  dispstr 'Role: Receiver' #13#10
+  sendln "radio rx 0"
+  mpause command_delay
+ 
+endif
+
+yesnobox "Another try ?" "Execution paused"
+if result goto retry
+
+:end
+
+; --- Stop test ---
+dispstr 'End of test'
+end
+
